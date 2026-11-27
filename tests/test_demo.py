@@ -2,6 +2,7 @@ from contextlib import redirect_stdout
 from http.client import HTTPConnection
 from io import StringIO
 import json
+from socket import create_connection
 from threading import Thread
 from unittest import TestCase
 
@@ -46,6 +47,24 @@ class DemoTests(TestCase):
                         if status == 200:
                             self.assertIn(b"Fabricated candles", body)
                             self.assertIn(b"Closed equity by trade", body)
+                    finally:
+                        connection.close()
+            finally:
+                server.shutdown()
+                worker.join()
+
+    def test_idle_connection_does_not_block_another_request(self):
+        with demo_server(backtest(toy_example()), 0) as server:
+            worker = Thread(target=server.serve_forever)
+            worker.start()
+            try:
+                with create_connection(server.server_address, timeout=2):
+                    connection = HTTPConnection(*server.server_address, timeout=2)
+                    try:
+                        connection.request("GET", "/")
+                        response = connection.getresponse()
+                        self.assertEqual(response.status, 200)
+                        self.assertIn(b"Fabricated candles", response.read())
                     finally:
                         connection.close()
             finally:

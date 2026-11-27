@@ -1,6 +1,6 @@
 """Loopback-only viewer for fabricated candles."""
 
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .engine import Result
 
@@ -48,8 +48,11 @@ real results. Paper only; not financial advice.</p>
     return html.encode("utf-8")
 
 
-def demo_server(result: Result, port: int) -> HTTPServer:
+def demo_server(result: Result, port: int) -> ThreadingHTTPServer:
     page = demo_page(result)
+
+    class Server(ThreadingHTTPServer):
+        daemon_threads = True
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
@@ -67,4 +70,4 @@ def demo_server(result: Result, port: int) -> HTTPServer:
             self.end_headers()
             self.wfile.write(page)
 
-    return HTTPServer(("127.0.0.1", port), Handler)
+    return Server(("127.0.0.1", port), Handler)
