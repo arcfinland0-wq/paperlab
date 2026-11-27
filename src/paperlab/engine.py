@@ -131,7 +131,7 @@ def backtest(candles: Iterable[Candle], config: Settings = Settings()) -> Result
         peak = max(peak, equity)
         drawdown = (peak - equity) / peak
         max_drawdown = max(max_drawdown, drawdown)
-        halted = halted or drawdown >= config.halt
+        halted = halted or (equity < peak and equity <= peak - peak * config.halt)
         curve.append(equity)
         trades.append(Trade(
             active.entry_bar, bar.timestamp, active.side, active.quantity,

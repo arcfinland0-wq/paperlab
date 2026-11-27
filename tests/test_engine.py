@@ -77,6 +77,13 @@ class EngineTests(TestCase):
         self.assertFalse(result.trades)
         self.assertAlmostEqual(result.marked_equity - result.closed_equity, 50)
 
+    def test_exact_drawdown_limit_halts_before_the_next_entry(self):
+        result = backtest([candle(0, signal=1), candle(1, low=98, signal=1), candle(2)],
+                          Settings(starting_equity=17.4, halt=0.005, fee_bps=0, slippage_bps=0))
+        self.assertAlmostEqual(result.max_closed_drawdown, 0.005)
+        self.assertTrue(result.halted)
+        self.assertEqual(result.open_side, 0)
+
     def test_opposite_signal_reverses_at_next_open(self):
         bars = [candle(0, signal=1), candle(1, signal=-1), candle(2, 101)]
         result = backtest(bars, Settings(fee_bps=0, slippage_bps=0))
