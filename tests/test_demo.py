@@ -70,3 +70,27 @@ class DemoTests(TestCase):
             finally:
                 server.shutdown()
                 worker.join()
+
+    def test_bare_host_is_allowed_only_on_default_http_port(self):
+        with demo_server(backtest(toy_example()), 0) as server:
+            host, port = server.server_address
+            worker = Thread(target=server.serve_forever)
+            worker.start()
+            try:
+                for configured_port, hostname, status in (
+                    (80, "127.0.0.1", 200), (80, "localhost", 200),
+                    (80, "outside.invalid", 403), (port, "localhost", 403),
+                ):
+                    with self.subTest(configured_port=configured_port, hostname=hostname):
+                        server.server_port = configured_port
+                        connection = HTTPConnection(host, port, timeout=2)
+                        try:
+                            connection.request("GET", "/", headers={"Host": hostname})
+                            response = connection.getresponse()
+                            response.read()
+                            self.assertEqual(response.status, status)
+                        finally:
+                            connection.close()
+            finally:
+                server.shutdown()
+                worker.join()

@@ -57,7 +57,11 @@ def demo_server(result: Result, port: int) -> ThreadingHTTPServer:
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             port = self.server.server_port
-            if self.headers.get_all("Host") not in ([f"127.0.0.1:{port}"], [f"localhost:{port}"]):
+            allowed_hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
+            if port == 80:
+                allowed_hosts.update(("127.0.0.1", "localhost"))
+            hosts = self.headers.get_all("Host", [])
+            if len(hosts) != 1 or hosts[0] not in allowed_hosts:
                 self.send_error(403)
                 return
             if self.path != "/":
