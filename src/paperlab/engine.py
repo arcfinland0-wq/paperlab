@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from math import isfinite
 from typing import Iterable
 
@@ -99,8 +100,9 @@ def _pnl(position: _Position, reference: float, fee: float, slip: float) -> tupl
 def _enter(bar: Candle, side: int, equity: float, config: Settings) -> _Position:
     fee, slip = config.fee_bps / 10_000, config.slippage_bps / 10_000
     entry = bar.open * (1 + side * slip)
-    stop = bar.open * (1 - side * config.stop)
-    target = bar.open * (1 + side * config.target)
+    opening = Decimal(str(bar.open))
+    stop = float(opening * (1 - side * Decimal(str(config.stop))))
+    target = float(opening * (1 + side * Decimal(str(config.target))))
     stop_fill = stop * (1 - side * slip)
     loss_per_unit = side * (entry - stop_fill) + (entry + stop_fill) * fee
     quantity = min(

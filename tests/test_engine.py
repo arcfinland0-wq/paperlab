@@ -36,6 +36,20 @@ class EngineTests(TestCase):
         self.assertAlmostEqual(trade.fees, (100.1 + 97.902) * trade.quantity * 0.001)
         self.assertAlmostEqual(trade.net_pnl, -config.starting_equity * config.risk)
 
+    def test_exact_price_touches_fill(self):
+        cfg = Settings(fee_bps=0, slippage_bps=0)
+        for side, opening, extreme, price, reason in (
+            (1, 99.05, "low", 97.069, "stop"),
+            (1, 99.01, "high", 102.9704, "target"),
+            (-1, 99.04, "high", 101.0208, "stop"),
+            (-1, 99.02, "low", 95.0592, "target"),
+        ):
+            with self.subTest(side=side, reason=reason):
+                bars = [candle(0, signal=side), candle(1, opening, **{extreme: price})]
+                trade, = backtest(bars, cfg).trades
+                self.assertEqual(trade.exit_reason, reason)
+                self.assertEqual(trade.exit_price, price)
+
     def test_margin_caps_notional(self):
         for leverage in (3, 5):
             with self.subTest(leverage=leverage):
